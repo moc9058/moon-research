@@ -1,8 +1,8 @@
 # Moon Research
 
 A reproducible workspace for learning AI by reading papers, implementing models,
-and recording experiments. Notion holds the knowledge graph; this repository
-holds executable evidence.
+and recording experiments. Notion holds reading notes; this repository holds
+executable implementations and evidence.
 
 ## Start here
 
@@ -54,17 +54,21 @@ Run uv from inside a study directory, or use `uv --project studies/<study> ...`
 from the repository root. Dependencies installed for one implementation do not
 enter another implementation's environment.
 
-## Notion knowledge graph
+## Notion article library
 
 Use the [moon-research Notion hub](https://app.notion.com/p/3d169428c8618198a261c0f821b25f98)
-for reading notes and relationships. The active system intentionally has only
-two databases:
+for paper files and reading notes. Its single **Articles** database contains:
 
-- **Articles**: one node per paper, survey, article, or technical document.
-- **Links**: directed, typed edges between Articles, with rationale and evidence.
+- Title
+- File
+- arXiv Link
+- Summary
+- Hypothesis
+- Key Idea
+- Limitation
 
-Duplicate `TEMPLATE — Article note (duplicate me)` when processing a source.
-See [docs/notion-workflow.md](docs/notion-workflow.md) for the complete workflow.
+See [docs/notion-workflow.md](docs/notion-workflow.md) for the short capture
+workflow.
 
 ## Repository layout
 
@@ -91,9 +95,7 @@ For every experiment, commit:
 - a link to the matching Notion Article.
 
 Do not commit paper PDFs, private company data, datasets, model checkpoints,
-secrets, or generated caches. Store only download instructions and provenance.
+secrets, or generated caches. Keep paper files and reading notes in Notion; keep
+executable implementations in this repository.
 
 Repository: [moc9058/moon-research](https://github.com/moc9058/moon-research)
-
-After committing an implementation, paste its directory or commit URL into the
-Article's `GitHub URL` property in Notion.
