@@ -1,0 +1,12 @@
+[experiment]
+seed = 42
+dataset = "fake"
+data_dir = "data"
+epochs = 1
+batch_size = 32
+learning_rate = 0.001
+num_workers = 0
+train_samples = 256
+test_samples = 128
+max_train_batches = 4
+max_test_batches = 2

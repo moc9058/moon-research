@@ -1,0 +1,26 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+.env
+
+# Large or generated research artifacts
+data/*
+!data/README.md
+checkpoints/*
+!checkpoints/README.md
+**/results/*
+!**/results/README.md
+wandb/
+mlruns/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

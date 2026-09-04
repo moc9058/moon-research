@@ -1,0 +1,32 @@
+[project]
+name = "moon-research"
+version = "0.1.0"
+description = "Reproducible AI paper implementations and experiments"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+new-study = "moon_research.new_study:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "ruff>=0.9",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.18,<0.13"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
