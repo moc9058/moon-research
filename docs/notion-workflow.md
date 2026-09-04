@@ -1,36 +1,60 @@
 # Notion and GitHub Workflow
 
-Notion hub: [AI Research Lab](https://app.notion.com/p/3d169428c8618198a261c0f821b25f98)
+Notion hub: [moon-research](https://app.notion.com/p/3d169428c8618198a261c0f821b25f98)
 
 ## Source of truth
 
 | Information | Source of truth |
 | --- | --- |
-| Paper metadata, summary, criticism, questions | Notion Papers |
-| Definitions, prerequisites, mastery | Notion Concepts |
-| Paper-to-paper relationship and explanation | Notion Connections |
-| Implementation status and next action | Notion Implementations |
-| Source code, tests, commands, configuration | GitHub |
+| Citation metadata, summary, criticism, and questions | Notion Articles |
+| Article-to-article relationship, rationale, and evidence | Notion Links |
+| Source code, tests, commands, and configuration | GitHub |
 | Metrics and reproducibility evidence | GitHub |
 | Large datasets and checkpoints | External artifact storage; link from both |
 
-## One paper cycle
+## Graph model
 
-1. Duplicate `TEMPLATE — Paper Note (duplicate me)` in Notion.
-2. Fill metadata and change Status from Inbox to Reading.
-3. Create or link Concept records while reading.
-4. Add a Connection row whenever a paper relationship needs an explanation.
-5. If implementation adds value, duplicate the Implementation template.
-6. Run `uv run new-study <slug>`, enter the new directory, and run
-   `uv sync --group dev` to create its independent environment.
-7. Paste the Notion URL into its README, then commit the hypothesis,
-   configuration, code, lock file, and result.
-8. Paste the GitHub directory or commit URL into Notion.
-9. Mark the implementation reproducible only after a clean rerun.
+An **Article** is a node. A **Link** is a directed edge:
+
+```text
+From Article --Relation--> To Article
+```
+
+Every Link must include a short **Why**. Add an **Evidence** locator such as a
+section, figure, experiment, or quoted-claim location after verifying the edge.
+Use Topics only for broad filtering; use Links for claims about relationships.
+
+## One article cycle
+
+1. Capture the title and Source URL in Articles with Status `Inbox`.
+2. Duplicate `TEMPLATE — Article note (duplicate me)` and fill the citation
+   properties.
+3. Change Status to `Reading`; complete the summary, discussion, limitations,
+   and questions inside the page.
+4. Write a one-sentence Takeaway.
+5. Add one Link row for every meaningful relationship to an existing Article.
+6. If coding improves understanding, run `uv run new-study <slug>`, enter the
+   new directory, and run `uv sync --group dev`.
+7. Commit the hypothesis, configuration, code, lock file, result, and Notion URL.
+8. Paste the GitHub directory or commit into the Article's `GitHub URL`.
+9. Set Status to `Processed` only after a clean review.
+
+## Link vocabulary
+
+| Relation | Direction |
+| --- | --- |
+| Builds on | A directly depends on an idea introduced by B |
+| Extends | A generalizes or adds capability to B |
+| Supports | A provides evidence consistent with B |
+| Contradicts | A provides evidence or claims against B |
+| Alternative to | A addresses a similar problem using a different approach |
+| Uses method from | A reuses a method from B |
+| Same dataset | A and B evaluate on the same dataset; direction is arbitrary |
 
 ## Review discipline
 
-A paper is Read when you can state the problem, contribution, evidence, and one
-limitation without reopening it. A concept is Applied only after using it in
-an implementation or analysis. A failed experiment still counts as useful work
-when its configuration and interpretation are recorded.
+An Article is Processed when you can explain its problem, method, evidence, and
+conclusion without reopening it; identify at least one limitation or open
+question; and represent its important relationships as explained Links. A
+failed experiment still counts when its configuration and interpretation are
+recorded reproducibly.
