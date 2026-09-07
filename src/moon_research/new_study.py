@@ -10,6 +10,7 @@ from pathlib import Path
 
 SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 SUPPORTED_LANGUAGES = ("python", "c", "cpp", "typescript")
+SUPPORTED_COMPUTE = ("shared", "dedicated", "local")
 
 ROOT_README = """# {title}
 
@@ -32,6 +33,11 @@ TODO
 | Language | Status | Notes |
 | --- | --- | --- |
 {language_rows}
+
+## Compute environment
+
+- Mode: `{compute}`
+{compute_details}
 
 ## Reproduce
 
@@ -174,12 +180,41 @@ def create_typescript(root: Path, slug: str, title: str) -> None:
     write(root / "tests" / ".gitkeep", "")
 
 
+def compute_details(mode: str, destination: Path) -> str:
+    if mode == "shared":
+        return (
+            "- AWS environment: use the repository-level `infra/aws/shared/` VM.\n"
+            "- Paper-specific setup: record it in `docs/experiments.md` or a "
+            "bootstrap script."
+        )
+    if mode == "dedicated":
+        write(
+            destination / "infra" / "aws" / "README.md",
+            "# Dedicated AWS environment\n\n"
+            "This paper requires infrastructure separate from the shared VM.\n\n"
+            "Before provisioning, define the reason, instance requirements, "
+            "storage, network topology, estimated cost, deployment command, "
+            "connection method, stop procedure, and destroy procedure.\n\n"
+            "Do not commit credentials, private keys, account IDs, instance IDs, "
+            "Terraform state, or generated CDK output.\n",
+        )
+        return (
+            "- AWS environment: define paper-specific IaC under `infra/aws/`.\n"
+            "- Do not reuse the shared VM unless this README is updated."
+        )
+    return (
+        "- AWS environment: none; run locally.\n"
+        "- Update this section before introducing cloud resources."
+    )
+
+
 def create_study(
     slug: str,
     root: Path,
     *,
     kind: str = "study",
     languages: Iterable[str] = ("python",),
+    compute: str = "shared",
 ) -> Path:
     """Create a directory without overwriting existing work."""
 
@@ -187,6 +222,8 @@ def create_study(
         raise ValueError("Use lowercase kebab-case, such as seq2seq-attention.")
     if kind not in {"paper", "study"}:
         raise ValueError("kind must be 'paper' or 'study'.")
+    if compute not in SUPPORTED_COMPUTE:
+        raise ValueError(f"Choose compute from: {', '.join(SUPPORTED_COMPUTE)}.")
 
     selected = tuple(dict.fromkeys(languages))
     unsupported = set(selected) - set(SUPPORTED_LANGUAGES)
@@ -197,8 +234,15 @@ def create_study(
     destination.mkdir(parents=True, exist_ok=False)
     title = slug.replace("-", " ").title()
     rows = "\n".join(f"| {language} | planned | TODO |" for language in selected)
+    details = compute_details(compute, destination)
     write(
-        destination / "README.md", ROOT_README.format(title=title, language_rows=rows)
+        destination / "README.md",
+        ROOT_README.format(
+            title=title,
+            language_rows=rows,
+            compute=compute,
+            compute_details=details,
+        ),
     )
     write(destination / "docs" / "notes.md", NOTES)
     write(destination / "docs" / "derivations.md", "# Derivations\n\nTODO\n")
@@ -230,10 +274,15 @@ def main() -> None:
     parser.add_argument(
         "--languages", nargs="+", choices=SUPPORTED_LANGUAGES, default=["python"]
     )
+    parser.add_argument("--compute", choices=SUPPORTED_COMPUTE, default="shared")
     parser.add_argument("--root", type=Path, default=Path.cwd())
     args = parser.parse_args()
     destination = create_study(
-        args.slug, args.root, kind=args.kind, languages=args.languages
+        args.slug,
+        args.root,
+        kind=args.kind,
+        languages=args.languages,
+        compute=args.compute,
     )
     print(f"Created {destination}")
 

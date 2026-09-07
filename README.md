@@ -18,6 +18,9 @@ moon-research/
 │       │   └── typescript/         # package.json + lock + node_modules
 │       ├── data/README.md           # Data provenance; data is ignored
 │       └── results/README.md        # Small, reviewable results
+├── infra/aws/
+│   ├── README.md                    # AWS rules and lifecycle
+│   └── shared/README.md             # Default VM used by many papers
 ├── studies/                        # Work not tied to one paper
 │   └── cnn-from-scratch/
 │       ├── README.md
@@ -54,7 +57,8 @@ Create a paper with only the implementations you need:
 ```bash
 uv run new-study 2017-attention-is-all-you-need \
   --kind paper \
-  --languages python cpp typescript
+  --languages python cpp typescript \
+  --compute shared
 ```
 
 Create a topic study:
@@ -64,6 +68,44 @@ uv run new-study seq2seq-attention --languages python
 ```
 
 The command never overwrites an existing directory.
+
+Compute modes:
+
+| Mode | Meaning | Files created |
+| --- | --- | --- |
+| `shared` | Use the repository-level AWS VM | README points to `infra/aws/shared/` |
+| `dedicated` | Use a separate VM or topology | Creates `papers/<paper>/infra/aws/README.md` |
+| `local` | Do not use AWS | README records local execution |
+
+No AWS resource is currently deployed by this repository. Infrastructure
+directories remain placeholders until requirements and a cost policy are
+approved.
+
+## Instructions for ChatGPT when adding a paper
+
+When asked to set up a new paper, ChatGPT or another coding agent must read this
+README and [docs/new-paper-workflow.md](docs/new-paper-workflow.md), then:
+
+1. Inspect the repository and preserve unrelated user changes.
+2. Collect or infer the year, slug, exact title, source URL, implementation
+   languages, compute mode, and initial reproduction goal.
+3. Default to `shared`. Choose `dedicated` only for isolation, multiple
+   hosts, or special architecture, kernel, accelerator, or network needs.
+4. Run `new-study`; do not invent a different directory structure.
+5. Fill known metadata without fabricating unknown authors, links, or results.
+6. Initialize language lockfiles where the required tool is available.
+7. Add paper-specific AWS IaC only for `dedicated` mode. Never deploy cloud
+   resources unless the user explicitly requests deployment.
+8. Run repository tests and available language-level smoke checks.
+9. Report paths, remaining TODOs, reproduction commands, and AWS deployment
+   status.
+
+The user can give ChatGPT this concise instruction:
+
+> Set up this paper in moon-research using the repository workflow. Use
+> [Python/C/C++/TypeScript] and [shared/dedicated/local] compute. Fill metadata
+> from [PDF or URL], initialize the environments, run available checks, and
+> commit the result. Do not deploy AWS resources.
 
 ## Independent environments
 
@@ -80,6 +122,28 @@ Do not make paper projects members of one uv or npm workspace. Separate
 lockfiles allow papers to use conflicting dependency versions. CMake keeps
 build settings and outputs separate. Add a paper-level `.devcontainer/` only
 when compiler, OS, CUDA, or system-library versions must also be pinned.
+
+## AWS compute model
+
+The normal path is one shared EC2 VM for multiple papers:
+
+```text
+infra/aws/shared/                 # shared VM definition and operations
+papers/<paper>/                   # paper code and documentation
+└── docs/experiments.md           # commands run on the shared VM
+```
+
+If a paper cannot safely or reproducibly share that VM:
+
+```text
+papers/<paper>/infra/aws/         # dedicated VM or multi-VM topology
+```
+
+Commit infrastructure definitions, bootstrap scripts, tags, and lifecycle
+commands. Do not commit credentials, private keys, account IDs, generated
+state, instance IDs, or secrets. Every AWS environment must document
+`deploy`, `connect`, `stop`, `status`, and `destroy`; `stop` and
+`destroy` must remain visibly distinct.
 
 Example commands:
 
