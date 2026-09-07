@@ -1,7 +1,7 @@
-# Study Template
+# Study template
 
-Use `uv run new-study <snake_case_name>` from the repository root rather than
-copying this directory. The command creates an independent uv project. Enter
-the new directory and run `uv sync --group dev` to create its local `.venv` and
-lock file. Every study should state its research question, source, hypothesis,
-reproduction command, results, failures, and corresponding Notion URL.
+Generate a study instead of copying this directory manually:
+
+```bash
+uv run new-study <kebab-case-name> --languages python cpp
+```

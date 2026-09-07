@@ -1,16 +1,11 @@
 # Studies
 
-Each directory should answer one research question and remain independently
-reproducible. Every study is its own uv project, with a local `pyproject.toml`,
-`uv.lock`, and `.venv`. Prefer a small baseline and one informative comparison
-over a large collection of unstructured notebooks.
-
-Generate a directory with:
+Use this area for concept implementations not tied to one paper. A study follows
+the paper layout: documentation at the study level and independent projects
+under `implementations/`.
 
 ```bash
-uv run new-study seq2seq_attention
-cd studies/seq2seq_attention
+uv run new-study seq2seq-attention --languages python
+cd studies/seq2seq-attention/implementations/python
 uv sync --group dev
 ```
-
-Then create or duplicate an Implementation record in Notion and link both ways.

@@ -9,11 +9,30 @@ htmlcov/
 .ipynb_checkpoints/
 .env
 
+# JavaScript / TypeScript
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# C / C++
+**/build/
+CMakeUserPresets.json
+compile_commands.json
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
+
 # Large or generated research artifacts
-data/*
-!data/README.md
-checkpoints/*
-!checkpoints/README.md
+**/data/*
+!**/data/README.md
+**/checkpoints/*
+!**/checkpoints/README.md
 **/results/*
 !**/results/README.md
 wandb/

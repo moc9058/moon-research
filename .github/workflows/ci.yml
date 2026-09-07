@@ -8,41 +8,45 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  root:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
       - name: Install uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           version: "0.12.9"
           enable-cache: true
-
       - name: Install Python
         run: uv python install
-
-      - name: Check lock file and install dependencies
+      - name: Install root tooling
         run: uv sync --locked --group dev
-
-      - name: Lint
-        run: uv run ruff check .
-
-      - name: Check formatting
-        run: uv run ruff format --check .
-
-      - name: Test
+      - name: Lint root tooling
+        run: uv run ruff check src tests
+      - name: Check root formatting
+        run: uv run ruff format --check src tests
+      - name: Test root tooling
         run: uv run pytest
 
-      - name: Install CNN study dependencies
-        run: uv sync --project studies/cnn_from_scratch --locked --group dev
-
-      - name: Test CNN study
-        run: uv run --project studies/cnn_from_scratch pytest studies/cnn_from_scratch/tests
-
-      - name: Smoke-test CNN study
-        run: >-
-          uv run --project studies/cnn_from_scratch
-          python studies/cnn_from_scratch/train.py
-          --config studies/cnn_from_scratch/config.toml
+  cnn-python:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: studies/cnn-from-scratch/implementations/python
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.12.9"
+          enable-cache: true
+      - name: Install Python
+        run: uv python install
+      - name: Install dependencies
+        run: uv sync --locked --group dev
+      - name: Test
+        run: uv run pytest
+      - name: Smoke test
+        run: uv run python train.py --config config.toml
