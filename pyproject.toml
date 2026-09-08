@@ -8,6 +8,7 @@ dependencies = []
 
 [project.scripts]
 new-study = "moon_research.new_study:main"
+new-paper = "moon_research.new_study:paper_main"
 
 [dependency-groups]
 dev = [

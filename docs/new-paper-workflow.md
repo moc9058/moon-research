@@ -11,7 +11,7 @@ prepares the environment and documentation; the user writes research code.
 | Kind/source | Paper PDF or URL; study topic or tutorial | Infer kind from the task; a study needs no paper |
 | Slug | `2017-attention-is-all-you-need`, `seq2seq-attention` | Infer; avoid overwriting an existing target |
 | Goal | Upstream reproduction, own implementation, modification | Environment setup for user implementation |
-| Languages | `python`, `cpp` | Python |
+| Languages | `python`, `cpp` | No environment unless requested; Python when `--generate` omits languages |
 | Runtime | WSL/Linux, Python version, CPU or GPU | Inspect available environment; do not assume it matches the user's PC |
 | Upstream code | Repository URL plus commit/tag | Look for an official repository when relevant; label alternatives |
 | Data | Dataset URL, version/split, existing local path | Record references; leave data undownloaded |
@@ -43,17 +43,31 @@ Run from the repository root:
 uv sync --locked --group dev
 
 # A single paper
-uv run new-study <year-short-title> --kind paper --languages python
+uv run new-paper <year-short-title> --generate --languages python
 
 # A topic or exercise
-uv run new-study <topic-slug> --kind study --languages python
+uv run new-study <topic-slug>
+
+# An executable assignment, with a separate environment
+uv run new-study <topic-slug>/assignment-1 --generate --languages python
 ```
 
-For an existing target, inspect it and update only missing setup/documentation;
-do not rerun the generator over it. Keep user code under
+Both commands default to README/docs only. Missing ancestors get the same
+documentation. Use --generate to add a missing language even to an existing node;
+existing language directories are never overwritten. Generation writes configuration
+only; follow the commands below to install the actual environment.
+For an existing implementation, inspect it and update only missing setup/documentation;
+do not regenerate it. Keep user code under
 `implementations/<language>/`. Populate the generated README and supporting
 files using this workflow; the generator supplies only a minimal skeleton.
-Its placeholder tests and TODO programs are not evidence of research correctness.
+Its C/C++ and TypeScript TODO programs are environment checks only. Python
+starts with an empty tests directory. Neither establishes research correctness.
+
+Each hierarchy level uses README.md plus docs/README.md and docs/notes.md.
+README contains scope, source links, status, child links, and environment ownership.
+Update the parent child index with relative links while preserving user content.
+Add derivations.md and experiments.md only when needed. Keep shared notes at
+parents and specific notes at children. Follow the root README command contract.
 
 ## Dependencies and runtime
 

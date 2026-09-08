@@ -5,36 +5,29 @@ languages, and recording experiments.
 
 ## Repository layout
 
-```text
-moon-research/
-├── papers/                         # One directory per paper
-│   └── 2017-attention-is-all-you-need/
-│       ├── README.md               # Metadata, question, status, links
-│       ├── docs/                   # Notes, derivations, experiment log
-│       ├── implementations/
-│       │   ├── python/             # pyproject.toml + uv.lock + .venv
-│       │   ├── cpp/                # CMakeLists.txt + presets + build
-│       │   ├── c/                  # CMakeLists.txt + presets + build
-│       │   └── typescript/         # package.json + lock + node_modules
-│       ├── data/README.md           # Data provenance; data is ignored
-│       └── results/README.md        # Small, reviewable results
-├── studies/                        # Work not tied to one paper
-│   └── cnn-from-scratch/
-│       ├── README.md
-│       ├── docs/
-│       └── implementations/python/
-├── src/moon_research/              # Repository scaffolding tools
-├── tests/                          # Tests for repository tooling
-└── .github/workflows/              # Continuous integration
-```
+| Path | Role |
+| --- | --- |
+| `papers/<paper>/README.md`, `docs/` | Paper scope, sources, notes, child links |
+| `papers/<paper>/<experiment>/README.md`, `docs/` | Optional nested experiment |
+| `studies/<course>/README.md`, `docs/` | Course container without an environment |
+| `studies/<course>/<assignment>/README.md`, `docs/` | Assignment scope and notes |
+| `<node>/implementations/<language>/` | Optional independent language environment |
+| `src/moon_research/` | Repository scaffolding commands |
+| `tests/` | Tests for repository tooling |
+| `.github/workflows/` | Continuous integration |
 
-A paper or study owns its documentation, data description, results, and all
-implementations. Create only the language directories that it actually uses.
+`<node>` is any paper/study/assignment/experiment path. Hierarchy depth does
+not determine whether a node needs an environment; its execution needs do.
+
+
+A paper, course, assignment, or experiment owns its documentation. Containers
+need no environment. Executable nodes keep independent language projects under
+`implementations/`, including their data/result descriptions. Create only needed languages.
 
 ## Naming
 
 - Paper: `<year>-<short-title>`, such as `2017-attention-is-all-you-need`.
-- Study: lowercase kebab-case, such as `cnn-from-scratch`.
+- Study and nested nodes: lowercase kebab-case, such as `course/assignment-1`.
 - Python import packages: snake_case inside `src/`.
 
 Keep the exact title, authors, venue, DOI/arXiv URL, and Notion URL in each
@@ -49,21 +42,68 @@ the lightweight root tooling:
 uv sync --group dev
 ```
 
-Create a paper with only the implementations you need:
+`uv sync --group dev` creates/updates the root `.venv`, installs this repository's
+CLI tools (`new-study`, `new-paper`) and the `dev` group (`pytest`, `ruff`). It
+uses `uv.lock`, updating the lock if needed. Use `--locked` to reject stale locks.
+The root environment is only for repository tools; it does not install child
+projects. `dev` is included by default in uv; the explicit flag makes intent clear.
+`uv run` also syncs automatically, so a separate initial sync is convenient but
+not required. See [uv syncing](https://docs.astral.sh/uv/concepts/projects/sync/).
+
+Run generation commands from the repository root:
 
 ```bash
-uv run new-study 2017-attention-is-all-you-need \
-  --kind paper \
-  --languages python cpp typescript
+# Documentation containers: README.md + docs/, no language environment
+uv run new-study stanford-cs-224n-spring-2024
+uv run new-paper 2017-attention-is-all-you-need
+
+# Nested assignments with different, independent language configurations
+uv run new-study stanford-cs-224n-spring-2024/assignment-1 --generate --languages python
+uv run new-study stanford-cs-224n-spring-2024/assignment-2 --generate --languages cpp
+
+# Add an environment to the existing paper container
+uv run new-paper 2017-attention-is-all-you-need --generate --languages python
 ```
 
-Create a topic study:
+`new-study` always targets `studies/`; `new-paper` always targets `papers/`.
+`--kind` has been removed. Both commands default to documentation only.
+`--generate` adds configuration under `implementations/<language>/`; its default
+language is Python. `--languages` requires `--generate`.
+
+Nested paths can have arbitrary depth. Each missing ancestor receives its own
+README and docs. Use kebab-case paths such as `assignment-1`; the README title
+can say “Assignment 1”. Reserved infrastructure names (`docs`, `implementations`,
+`data`, `results`, `src`, `tests`) cannot be hierarchy components.
+Use `--root /path/to/moon-research` to select the destination explicitly.
+
+Existing documentation is preserved. An existing node can receive a new language
+with `--generate`; an existing language directory is rejected without overwriting
+files. For dependency changes in an existing implementation, edit it in place.
+Repeating a documentation-only creation also reports that the directory exists.
+
+Generation does **not** install packages or create `.venv`. Initialize Python
+only in the selected implementation directory:
 
 ```bash
-uv run new-study seq2seq-attention --languages python
+cd studies/stanford-cs-224n-spring-2024/assignment-1/implementations/python
+uv sync --group dev
+# Commit the resulting uv.lock; subsequent installs use:
+uv sync --locked --group dev
 ```
 
-The command never overwrites an existing directory.
+Do not run study environment setup from a course/assignment documentation folder:
+uv can discover the root project in its parents. Each actual language project
+owns its environment; siblings and parent containers do not share it.
+
+## Why src/moon_research and tests exist
+
+`src/moon_research/` implements the installed generator commands. Deleting it
+would break `uv run new-study` and `uv run new-paper`. Root `tests/` checks nested
+paths, routing, environment isolation, and preservation of existing files.
+They are repository tooling, not a place for paper or assignment implementations.
+Keep both while using these commands. Research tests belong to their own
+`implementations/<language>/tests/` directory. No always-passing placeholder
+Python tests are generated.
 
 ## Instructions for Codex: papers and studies
 
@@ -83,7 +123,7 @@ The user writes the research code.
 Codex must:
 
 1. Inspect the target directory and preserve existing code and unrelated changes.
-   Use `new-study` only for a new target; update an existing project in place.
+   Use `new-study` or `new-paper` for new nodes; use `--generate` only to add a missing language. Update existing implementations in place.
 2. Choose `papers/` for one paper and `studies/` for a topic, tutorial, or exercise.
    Infer routine details; ask only for missing information that changes setup.
 3. Record the goal: upstream reproduction, independent implementation, or a
@@ -116,7 +156,7 @@ A short request is sufficient:
 
 ## Independent environments
 
-Isolation is per paper/study and per language:
+Isolation is per executable node (including nested assignments/experiments) and per language:
 
 | Language | Files committed | Generated locally |
 | --- | --- | --- |
@@ -133,14 +173,16 @@ when compiler, OS, CUDA, or system-library versions must also be pinned.
 ## Run implementation checks
 
 Run these inside the relevant `implementations/<language>/` directory.
-These are environment/build checks; generated placeholder tests do not establish
-algorithm correctness or reproduction of a paper.
+These are environment/build checks; they do not establish algorithm correctness
+or reproduction of a paper. New Python scaffolds contain no tests yet; run pytest
+only after meaningful tests have been added.
 
 Example commands:
 
 ```bash
 # Python
-uv sync --locked --group dev && uv run pytest
+uv sync --locked --group dev
+uv run python -c "import sys; print(sys.executable)"
 
 # C or C++
 cmake --preset default
@@ -161,6 +203,16 @@ npm ci && npm test
 | `docs/experiments.md` | Commands, configurations, results, interpretation |
 | `data/README.md` | Data source, license, download and preprocessing |
 | `results/README.md` | Small committed results and large external artifacts |
+
+At every course/paper/assignment/experiment level, create `README.md`,
+`docs/README.md`, and `docs/notes.md`. README records scope, sources, status,
+relative child links, and environment ownership. Codex updates the parent child
+index when adding a node; the generator leaves existing README content untouched.
+Add derivations and experiment logs only when relevant. Put shared concepts at
+the parent and assignment-specific notes at the child; link instead of duplicating.
+Language projects also receive README/docs. `data/` and `results/` documentation
+is generated inside language projects; shared data may be documented at a parent.
+The same documentation templates are in `studies/_template` and `papers/_template`.
 
 Each language-level `README.md` explains setup, commands, implementation scope,
 and known differences from the source. `data/README.md` can contain external

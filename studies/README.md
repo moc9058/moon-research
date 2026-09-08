@@ -1,15 +1,13 @@
 # Studies
 
-Use this area for concept implementations not tied to one paper. A study follows
-the paper layout: documentation at the study level and independent projects
-under `implementations/`.
+Run from repository root:
 
 ```bash
-uv run new-study seq2seq-attention --languages python
-cd studies/seq2seq-attention/implementations/python
-uv sync --group dev
+uv run new-study <name>
+uv run new-study <name>/experiment-1 --generate --languages python
 ```
 
-For Codex setup, follow [the paper/study workflow](../docs/new-paper-workflow.md).
-The user writes research code; prepare environments and source/data references only
-unless implementation is explicitly requested. Large datasets may remain external links.
+Default: README/docs only. Use --generate for isolated language configuration;
+install dependencies inside implementations/<language>. Every nested node has
+its own documentation. See [repository README](../README.md) and
+[setup workflow](../docs/new-paper-workflow.md).

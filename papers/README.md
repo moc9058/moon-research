@@ -1,17 +1,13 @@
 # Papers
 
-Each directory represents one paper and contains its reading notes, derivations,
-experiment log, data provenance, results, and language-specific implementations.
+Run from repository root:
 
 ```bash
-uv run new-study 2017-attention-is-all-you-need \
-  --kind paper \
-  --languages python cpp typescript
+uv run new-paper <name>
+uv run new-paper <name>/experiment-1 --generate --languages python
 ```
 
-Only request languages you will use. Add `.devcontainer/` when compiler, CUDA,
-OS, or system libraries require stronger isolation.
-
-For Codex setup, follow [the paper/study workflow](../docs/new-paper-workflow.md).
-The user writes research code; prepare environments and source/data references only
-unless implementation is explicitly requested. Large datasets may remain external links.
+Default: README/docs only. Use --generate for isolated language configuration;
+install dependencies inside implementations/<language>. Every nested node has
+its own documentation. See [repository README](../README.md) and
+[setup workflow](../docs/new-paper-workflow.md).

@@ -1,29 +1,29 @@
-# Paper title
+# Title
 
-Status: reading
+Status: planned
+
+## Goal and scope
+
+TODO: course/topic, assignment, paper, or experiment; define this level's scope.
 
 ## Source
 
-- Exact title:
-- Authors:
-- Venue/year:
-- DOI/arXiv:
-- Notion record:
+- Exact title / authors / venue / year: TODO
+- Course / paper / DOI / arXiv URL: TODO
+- Upstream code / exact revision / license: TODO
+- Notion record: TODO
 
-## Research question
+## Children
 
-TODO
+List child directories with relative links, purpose, and status. Keep each
+child's details in its own README; link to shared parent notes where useful.
 
-## Implementation status
+## Environment and implementation
 
-| Language | Status | Notes |
-| --- | --- | --- |
-| Python | planned | TODO |
+This level starts as documentation only. If generated, see
+`implementations/<language>/README.md` for independent setup commands.
+Environment setup is not evidence of a completed implementation or reproduction.
 
-## Reproduce
+## Notes
 
-See each project under `implementations/`.
-
-For Codex setup, follow [the paper/study workflow](../../docs/new-paper-workflow.md).
-The user writes research code; prepare environments and source/data references only
-unless implementation is explicitly requested. Large datasets may remain external links.
+See [docs](docs/README.md). Research code is written by the user.

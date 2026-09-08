@@ -1,42 +1,126 @@
-from pathlib import Path
+import subprocess
+import sys
+import tomllib
 
 import pytest
 
-from moon_research.new_study import create_study
+from moon_research.new_study import create_paper, create_study
 
 
-def test_create_paper_with_selected_languages(tmp_path: Path) -> None:
-    destination = create_study(
-        "2017-attention-is-all-you-need",
+def test_documentation_only_at_every_level(tmp_path):
+    target = create_study("course/assignment-1", tmp_path)
+    for node in (target, target.parent):
+        assert (node / "README.md").is_file()
+        assert (node / "docs/notes.md").is_file()
+        assert not (node / "implementations").exists()
+        assert not (node / "pyproject.toml").exists()
+        assert not (node / ".venv").exists()
+
+
+def test_independent_nested_environments(tmp_path):
+    first = create_study("course/assignment-1", tmp_path, generate=True)
+    second = create_study(
+        "course/assignment-2",
         tmp_path,
-        kind="paper",
-        languages=("python", "cpp", "typescript"),
+        generate=True,
+        languages=["cpp", "c", "typescript"],
     )
-
-    assert destination == tmp_path / "papers" / "2017-attention-is-all-you-need"
-    assert (destination / "docs" / "notes.md").is_file()
-    assert (destination / "implementations" / "python" / "pyproject.toml").is_file()
-    assert (destination / "implementations" / "cpp" / "CMakeLists.txt").is_file()
-    assert (destination / "implementations" / "typescript" / "package.json").is_file()
-    assert not (destination / "implementations" / "c").exists()
-    assert not (destination / "infra").exists()
-
-
-def test_python_is_an_independent_uv_project(tmp_path: Path) -> None:
-    destination = create_study("seq2seq-attention", tmp_path)
-    python = destination / "implementations" / "python"
-
-    pyproject = (python / "pyproject.toml").read_text(encoding="utf-8")
-    assert 'name = "moon-research-seq2seq-attention"' in pyproject
-    assert (python / ".python-version").read_text(encoding="utf-8") == "3.12\n"
-    assert (python / "tests" / "test_smoke.py").is_file()
+    config = tomllib.loads(
+        (first / "implementations/python/pyproject.toml").read_text()
+    )
+    assert config["tool"]["uv"]["package"] is False
+    assert not (first.parent / "pyproject.toml").exists()
+    assert not (first / "implementations/python/.venv").exists()
+    assert (second / "implementations/cpp/CMakeLists.txt").is_file()
+    assert (second / "implementations/c/CMakeLists.txt").is_file()
+    assert (second / "implementations/typescript/package.json").is_file()
+    assert not (second / "implementations/python").exists()
 
 
-def test_rejects_unsafe_name(tmp_path: Path) -> None:
+def test_paper_routing_and_nested_docs(tmp_path):
+    paper = create_paper("2017-attention/experiment-1", tmp_path)
+    assert paper == tmp_path / "papers/2017-attention/experiment-1"
+    assert not (tmp_path / "studies").exists()
+    assert (paper / "docs/README.md").is_file()
+
+
+def test_augment_preserves_user_work_and_rejects_overwrite(tmp_path):
+    target = create_study("course", tmp_path)
+    readme = target / "README.md"
+    readme.write_text("My notes\n")
+    create_study("course", tmp_path, generate=True)
+    model = target / "implementations/python/src/model.py"
+    model.write_text("user code\n")
+    with pytest.raises(FileExistsError):
+        create_study("course", tmp_path, generate=True, languages=["cpp", "python"])
+    assert not (target / "implementations/cpp").exists()
+    assert model.read_text() == "user code\n"
+    create_study("course", tmp_path, generate=True, languages=["cpp"])
+    assert readme.read_text() == "My notes\n"
+    with pytest.raises(FileExistsError):
+        create_study("course", tmp_path)
+
+
+@pytest.mark.parametrize(
+    "slug",
+    [
+        "../outside",
+        "/absolute",
+        "a//b",
+        "a/../b",
+        "a\\b",
+        "Bad Name",
+        "a/docs/b",
+        "_template",
+    ],
+)
+def test_rejects_unsafe_paths_without_writes(tmp_path, slug):
     with pytest.raises(ValueError):
-        create_study("../outside", tmp_path)
+        create_study(slug, tmp_path)
+    assert not list(tmp_path.iterdir())
 
 
-def test_rejects_unknown_language(tmp_path: Path) -> None:
+def test_rejects_symlink(tmp_path):
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (tmp_path / "studies").symlink_to(outside, target_is_directory=True)
     with pytest.raises(ValueError):
-        create_study("valid-name", tmp_path, languages=("rust",))
+        create_study("course", tmp_path)
+    assert not list(outside.iterdir())
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"languages": ["python"]},
+        {"generate": True, "languages": ["rust"]},
+        {"generate": True, "languages": []},
+    ],
+)
+def test_invalid_options_do_not_write(tmp_path, kwargs):
+    with pytest.raises(ValueError):
+        create_study("course", tmp_path, **kwargs)
+    assert not list(tmp_path.iterdir())
+
+
+def test_cli_routes_and_rejects_removed_kind(tmp_path):
+    for entry, collection in [("main", "studies"), ("paper_main", "papers")]:
+        command = [
+            sys.executable,
+            "-c",
+            f"from moon_research.new_study import {entry}; {entry}()",
+        ]
+        result = subprocess.run(
+            command + ["course", "--root", str(tmp_path)],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0, result.stderr
+        assert (tmp_path / collection / "course/README.md").is_file()
+        result = subprocess.run(
+            command + ["other", "--kind", "paper", "--root", str(tmp_path)],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 2
+        assert not (tmp_path / collection / "other").exists()

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import tempfile
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -13,29 +14,45 @@ SUPPORTED_LANGUAGES = ("python", "c", "cpp", "typescript")
 
 ROOT_README = """# {title}
 
-Status: reading
+Status: planned
+
+## Goal and scope
+
+TODO: course/topic, assignment, paper, or experiment; define this level's scope.
 
 ## Source
 
-- Exact title: TODO
-- Authors: TODO
-- Venue/year: TODO
-- DOI/arXiv: TODO
+- Exact title / authors / venue / year: TODO
+- Course / paper / DOI / arXiv URL: TODO
+- Upstream code / exact revision / license: TODO
 - Notion record: TODO
 
-## Research question
+## Children
 
-TODO
+List child directories with relative links, purpose, and status. Keep each
+child's details in its own README; link to shared parent notes where useful.
 
-## Implementation status
+## Environment and implementation
 
-| Language | Status | Notes |
-| --- | --- | --- |
-{language_rows}
+This level starts as documentation only. If generated, see
+`implementations/<language>/README.md` for independent setup commands.
+Environment setup is not evidence of a completed implementation or reproduction.
 
-## Reproduce
+## Notes
 
-See each directory under `implementations/`.
+See [docs](docs/README.md). Research code is written by the user.
+"""
+
+DOCS_README = """# Documentation
+
+Keep notes scoped to this level; link to parent/child documents instead of copying.
+
+- [notes.md](notes.md): summary, hypothesis, key idea, limitations, questions.
+- Add `derivations.md` when mathematical derivations are needed.
+- Add `experiments.md` when experiments are planned: hypothesis, status, source
+  revision, data version/split, working directory, command, configuration, seed,
+  hardware, baseline, observations, artifact links, and limitations.
+- Mark unrun experiments as **not run**. Record only observed results.
 """
 
 NOTES = """# Notes
@@ -119,10 +136,7 @@ def create_python(root: Path, slug: str, title: str) -> None:
     write(root / ".python-version", "3.12\n")
     write(root / "pyproject.toml", PYPROJECT.format(slug=slug, title=title))
     write(root / "src" / ".gitkeep", "")
-    write(
-        root / "tests" / "test_smoke.py",
-        "def test_placeholder() -> None:\n    assert True\n",
-    )
+    write(root / "tests" / ".gitkeep", "")
 
 
 def create_cmake(root: Path, slug: str, *, cpp: bool) -> None:
@@ -174,74 +188,171 @@ def create_typescript(root: Path, slug: str, title: str) -> None:
     write(root / "tests" / ".gitkeep", "")
 
 
-def create_study(
+def create_node(
     slug: str,
     root: Path,
     *,
-    kind: str = "study",
-    languages: Iterable[str] = ("python",),
+    collection: str,
+    generate: bool = False,
+    languages: Iterable[str] | None = None,
 ) -> Path:
-    """Create a directory without overwriting existing work."""
-
-    if not SLUG_PATTERN.fullmatch(slug):
-        raise ValueError("Use lowercase kebab-case, such as seq2seq-attention.")
-    if kind not in {"paper", "study"}:
-        raise ValueError("kind must be 'paper' or 'study'.")
-    selected = tuple(dict.fromkeys(languages))
-    unsupported = set(selected) - set(SUPPORTED_LANGUAGES)
-    if not selected or unsupported:
+    """Create nested documentation nodes; opt in to isolated language scaffolds."""
+    parts = slug.split("/")
+    reserved = {"docs", "implementations", "data", "results", "src", "tests"}
+    if any(not SLUG_PATTERN.fullmatch(p) or p in reserved for p in parts):
+        raise ValueError(
+            "Use slash-separated lowercase kebab-case names; "
+            "docs/implementations/data/results/src/tests are reserved."
+        )
+    if collection not in {"papers", "studies"}:
+        raise ValueError("Unknown collection.")
+    if languages is not None and not generate:
+        raise ValueError("--languages requires --generate.")
+    selected = tuple(dict.fromkeys(languages if languages is not None else ("python",)))
+    if generate and (not selected or set(selected) - set(SUPPORTED_LANGUAGES)):
         raise ValueError(f"Choose one or more of: {', '.join(SUPPORTED_LANGUAGES)}.")
 
-    destination = root / ("papers" if kind == "paper" else "studies") / slug
-    destination.mkdir(parents=True, exist_ok=False)
-    title = slug.replace("-", " ").title()
-    rows = "\n".join(f"| {language} | planned | TODO |" for language in selected)
-    write(
-        destination / "README.md",
-        ROOT_README.format(
-            title=title,
-            language_rows=rows,
-        ),
-    )
-    write(destination / "docs" / "notes.md", NOTES)
-    write(destination / "docs" / "derivations.md", "# Derivations\n\nTODO\n")
-    write(destination / "docs" / "experiments.md", "# Experiments\n\nTODO\n")
-    write(
-        destination / "data" / "README.md",
-        "# Data\n\nRecord source and preprocessing.\n",
-    )
-    write(destination / "results" / "README.md", "# Results\n\nIndex results here.\n")
+    root = root.resolve()
+    base = root / collection
+    nodes = [base.joinpath(*parts[:i]) for i in range(1, len(parts) + 1)]
+    destination = nodes[-1]
+    # Validate every path before writing, including in-repository symlinks.
+    candidates = [base, *nodes]
+    if generate:
+        candidates += [destination / "implementations"]
+        candidates += [destination / "implementations" / lang for lang in selected]
+    for path in candidates:
+        if path.is_symlink() or (path.exists() and not path.is_dir()):
+            raise ValueError(f"Not a regular directory: {path}")
+    if destination.exists() and not generate:
+        raise FileExistsError(f"Already exists: {destination}")
+    if generate:
+        for lang in selected:
+            target = destination / "implementations" / lang
+            if target.exists():
+                raise FileExistsError(f"Implementation already exists: {target}")
 
-    implementations = destination / "implementations"
-    for language in selected:
-        language_root = implementations / language
-        if language == "python":
-            create_python(language_root, slug, title)
-        elif language == "c":
-            create_cmake(language_root, slug, cpp=False)
-        elif language == "cpp":
-            create_cmake(language_root, slug, cpp=True)
-        else:
-            create_typescript(language_root, slug, title)
+    # Stage new content so generator failures cannot leave half-written templates.
+    with tempfile.TemporaryDirectory() as temporary:
+        staging = Path(temporary)
+        for node in nodes:
+            if not node.exists():
+                staged = staging / node.relative_to(root)
+                title = node.name.replace("-", " ").title()
+                write(staged / "README.md", ROOT_README.format(title=title))
+                write(staged / "docs" / "README.md", DOCS_README)
+                write(staged / "docs" / "notes.md", NOTES)
+        for lang in selected if generate else ():
+            staged = staging / destination.relative_to(root) / "implementations" / lang
+            title = parts[-1].replace("-", " ").title()
+            name = "-".join(parts)
+            if lang == "python":
+                create_python(staged, name, title)
+                commands = (
+                    "uv sync --group dev\n"
+                    'uv run python -c "import sys; print(sys.executable)"'
+                )
+            elif lang in {"c", "cpp"}:
+                create_cmake(staged, name, cpp=lang == "cpp")
+                commands = (
+                    "cmake --preset default\n"
+                    "cmake --build --preset default\n"
+                    "ctest --preset default"
+                )
+            else:
+                create_typescript(staged, name, title)
+                commands = "npm install --package-lock-only\nnpm ci\nnpm test"
+            write(
+                staged / "README.md",
+                f"# {lang} implementation\n\n"
+                f"Working directory: `{destination.relative_to(root)}/"
+                f"implementations/{lang}/`\n\n"
+                f"```bash\n{commands}\n```\n\n"
+                "Generated configuration only; dependencies/builds have not run.\n"
+                "Pin source-compatible versions, commit the resulting lockfile, and\n"
+                "use locked installs thereafter. The user implements research "
+                "code in `src/`.\n"
+                "C/C++ and TypeScript programs are environment placeholders only.\n"
+                "Add meaningful tests when there is behavior to verify.\n",
+            )
+            write(staged / "docs" / "README.md", DOCS_README)
+            write(staged / "docs" / "notes.md", NOTES)
+            write(
+                staged / "data" / "README.md",
+                "# Data\n\nRecord stable source URL, license, version/split, "
+                "checksum if known,\nexpected local path, and access/preparation "
+                "instructions. External links are valid.\n",
+            )
+            write(
+                staged / "results" / "README.md",
+                "# Results\n\nIndex external artifacts; record observations in "
+                "../docs/experiments.md.\n",
+            )
+        files = list(staging.rglob("*"))
+        for source in files:
+            if source.is_file():
+                target = root / source.relative_to(staging)
+                if target.exists() or target.is_symlink():
+                    raise FileExistsError(f"Refusing to overwrite: {target}")
+        for source in files:
+            if source.is_file():
+                target = root / source.relative_to(staging)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                with target.open("x", encoding="utf-8") as stream:
+                    stream.write(source.read_text(encoding="utf-8"))
     return destination
 
 
-def main() -> None:
+def create_study(slug: str, root: Path, **kwargs) -> Path:
+    return create_node(slug, root, collection="studies", **kwargs)
+
+
+def create_paper(slug: str, root: Path, **kwargs) -> Path:
+    return create_node(slug, root, collection="papers", **kwargs)
+
+
+def run_cli(collection: str) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("slug", help="lowercase kebab-case directory name")
-    parser.add_argument("--kind", choices=("paper", "study"), default="study")
+    parser.add_argument("slug", help="relative path, e.g. course/assignment-1")
     parser.add_argument(
-        "--languages", nargs="+", choices=SUPPORTED_LANGUAGES, default=["python"]
+        "--generate",
+        action="store_true",
+        help="add language configuration; does not install dependencies",
     )
-    parser.add_argument("--root", type=Path, default=Path.cwd())
+    parser.add_argument("--languages", nargs="+", choices=SUPPORTED_LANGUAGES)
+    parser.add_argument(
+        "--root",
+        type=Path,
+        default=Path.cwd(),
+        help="repository root (default: current directory)",
+    )
     args = parser.parse_args()
-    destination = create_study(
-        args.slug,
-        args.root,
-        kind=args.kind,
-        languages=args.languages,
-    )
-    print(f"Created {destination}")
+    try:
+        destination = create_node(
+            args.slug,
+            args.root,
+            collection=collection,
+            generate=args.generate,
+            languages=args.languages,
+        )
+    except (ValueError, OSError) as error:
+        parser.error(str(error))
+    print(f"Prepared {destination}")
+    if args.generate:
+        print(
+            "Configuration generated. Follow "
+            "implementations/<language>/README.md to install/build."
+        )
+    else:
+        print("Documentation only; no implementation environment created.")
+
+
+def main() -> None:
+    run_cli("studies")
+
+
+def paper_main() -> None:
+    run_cli("papers")
 
 
 if __name__ == "__main__":
