@@ -28,7 +28,7 @@ moon-research/
 └── .github/workflows/              # Continuous integration
 ```
 
-A paper owns its documentation, data description, results, and all
+A paper or study owns its documentation, data description, results, and all
 implementations. Create only the language directories that it actually uses.
 
 ## Naming
@@ -65,29 +65,58 @@ uv run new-study seq2seq-attention --languages python
 
 The command never overwrites an existing directory.
 
-## Instructions for ChatGPT when adding a paper
+## Instructions for Codex: papers and studies
 
-When asked to set up a new paper, ChatGPT or another coding agent must read this
-README and [docs/new-paper-workflow.md](docs/new-paper-workflow.md), then:
+Read `AGENTS.md`, this README, and
+[the setup workflow](docs/new-paper-workflow.md) before adding or updating either
+`papers/` or `studies/`. The default request is **environment setup only**.
+The user writes the research code.
 
-1. Inspect the repository and preserve unrelated user changes.
-2. Collect or infer the year, slug, exact title, source URL, implementation
-   languages, and initial reproduction goal.
-3. Run `new-study`; do not invent a different directory structure.
-4. Fill known metadata without fabricating unknown authors, links, or results.
-5. Initialize language lockfiles where the required tool is available.
-6. Run repository tests and available language-level smoke checks.
-7. Report paths, remaining TODOs, and reproduction commands.
+| Responsibility | Default owner |
+| --- | --- |
+| Directories, dependency manifests, lockfiles, environment instructions | Codex |
+| Source metadata, upstream version, dataset links and local path instructions | Codex |
+| Import/build checks and small environment smoke checks | Codex |
+| Models, algorithms, training/evaluation loops, research preprocessing, experimental changes | User |
+| Long training runs, bulk downloads, cloud provisioning | Only when explicitly requested |
 
-The user can give ChatGPT this concise instruction:
+Codex must:
 
-> Set up this paper in moon-research using the repository workflow. Use
-> [Python/C/C++/TypeScript]. Fill metadata from [PDF or URL], initialize the
-> environments, run available checks, and commit the result.
+1. Inspect the target directory and preserve existing code and unrelated changes.
+   Use `new-study` only for a new target; update an existing project in place.
+2. Choose `papers/` for one paper and `studies/` for a topic, tutorial, or exercise.
+   Infer routine details; ask only for missing information that changes setup.
+3. Record the goal: upstream reproduction, independent implementation, or a
+   modification experiment. Identify the target table, figure, metric, or behavior.
+4. Prepare only the requested languages and dependencies justified by the source
+   or user's plan. Check Python/framework/OS/CPU/GPU compatibility rather than
+   blindly retaining the generator's default versions.
+5. Leave research implementation to the user. Empty source directories, TODO
+   placeholders, configuration files, and setup scripts are allowed. Do not
+   implement or alter research logic without a specific request.
+6. Record the upstream repository URL and exact commit/tag. Keep upstream code
+   separate from user code; document its license and original commands.
+7. Document datasets using stable external links, versions, splits, expected
+   local paths, and download/access instructions. Do not commit dataset files,
+   checkpoints, credentials, or signed download URLs.
+8. Verify only what is available: environment/build checks are not scientific
+   reproduction. Mark unrun commands and missing data/hardware explicitly.
+9. Report changed files, checks, exact next commands with working directories,
+   the first file the user should implement, and outstanding limitations.
+
+Detailed source/data rules, baseline records, and reusable Korean request
+examples are in [docs/new-paper-workflow.md](docs/new-paper-workflow.md).
+
+A short request is sufficient:
+
+> Set up [paper URL / study topic] in moon-research using the repository workflow.
+> My goal is [upstream reproduction / own implementation / modification].
+> Use [language] on [OS, CPU/GPU]. I will write the research code; prepare the
+> environment, source/data references, and verification instructions only.
 
 ## Independent environments
 
-Isolation is per paper and per language:
+Isolation is per paper/study and per language:
 
 | Language | Files committed | Generated locally |
 | --- | --- | --- |
@@ -96,12 +125,16 @@ Isolation is per paper and per language:
 | C++ | `CMakeLists.txt`, `CMakePresets.json` | `build/` |
 | TypeScript | `package.json`, `package-lock.json`, `.nvmrc` | `node_modules/`, `dist/` |
 
-Do not make paper projects members of one uv or npm workspace. Separate
-lockfiles allow papers to use conflicting dependency versions. CMake keeps
+Do not make paper/study projects members of one uv or npm workspace. Separate
+lockfiles allow projects to use conflicting dependency versions. CMake keeps
 build settings and outputs separate. Add a paper-level `.devcontainer/` only
 when compiler, OS, CUDA, or system-library versions must also be pinned.
 
 ## Run implementation checks
+
+Run these inside the relevant `implementations/<language>/` directory.
+These are environment/build checks; generated placeholder tests do not establish
+algorithm correctness or reproduction of a paper.
 
 Example commands:
 
@@ -118,7 +151,7 @@ ctest --preset default
 npm ci && npm test
 ```
 
-## Paper documentation
+## Paper and study documentation
 
 | File | Purpose |
 | --- | --- |
@@ -130,7 +163,13 @@ npm ci && npm test
 | `results/README.md` | Small committed results and large external artifacts |
 
 Each language-level `README.md` explains setup, commands, implementation scope,
-and known differences from the paper.
+and known differences from the source. `data/README.md` can contain external
+links only: data does not need to live in Git or be downloaded during setup.
+
+The default ignore rules keep only `data/README.md` and `results/README.md` from
+those directories. Put experiment records in `docs/experiments.md`; index large
+results with external links in `results/README.md`. If small reviewed metrics
+files should be committed, add a narrow ignore exception for those files.
 
 ## Included CNN study
 
