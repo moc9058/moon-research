@@ -11,7 +11,6 @@ def test_create_paper_with_selected_languages(tmp_path: Path) -> None:
         tmp_path,
         kind="paper",
         languages=("python", "cpp", "typescript"),
-        compute="shared",
     )
 
     assert destination == tmp_path / "papers" / "2017-attention-is-all-you-need"
@@ -20,7 +19,7 @@ def test_create_paper_with_selected_languages(tmp_path: Path) -> None:
     assert (destination / "implementations" / "cpp" / "CMakeLists.txt").is_file()
     assert (destination / "implementations" / "typescript" / "package.json").is_file()
     assert not (destination / "implementations" / "c").exists()
-    assert "Mode: `shared`" in (destination / "README.md").read_text(encoding="utf-8")
+    assert not (destination / "infra").exists()
 
 
 def test_python_is_an_independent_uv_project(tmp_path: Path) -> None:
@@ -41,24 +40,3 @@ def test_rejects_unsafe_name(tmp_path: Path) -> None:
 def test_rejects_unknown_language(tmp_path: Path) -> None:
     with pytest.raises(ValueError):
         create_study("valid-name", tmp_path, languages=("rust",))
-
-
-def test_dedicated_compute_creates_infrastructure_contract(
-    tmp_path: Path,
-) -> None:
-    destination = create_study(
-        "2024-dedicated-paper",
-        tmp_path,
-        kind="paper",
-        compute="dedicated",
-    )
-
-    assert (destination / "infra" / "aws" / "README.md").is_file()
-    assert "Mode: `dedicated`" in (destination / "README.md").read_text(
-        encoding="utf-8"
-    )
-
-
-def test_rejects_unknown_compute_mode(tmp_path: Path) -> None:
-    with pytest.raises(ValueError):
-        create_study("valid-name", tmp_path, compute="serverless")

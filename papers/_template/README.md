@@ -20,13 +20,6 @@ TODO
 | --- | --- | --- |
 | Python | planned | TODO |
 
-## Compute environment
-
-- Mode: `shared`
-- AWS environment: use `../../infra/aws/shared/`.
-- Change the mode to `dedicated` and create `infra/aws/` only when the paper
-  has documented isolation or infrastructure requirements.
-
 ## Reproduce
 
 See each project under `implementations/`.

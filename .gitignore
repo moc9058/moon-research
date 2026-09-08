@@ -29,11 +29,6 @@ compile_commands.json
 *.dylib
 *.dll
 *.exe
-cdk.out/
-.cdk.staging/
-*.tfstate
-*.tfstate.*
-.terraform/
 
 # Large or generated research artifacts
 **/data/*
